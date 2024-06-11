@@ -33,20 +33,22 @@ def linkedin_login(driver, username, password):
 
 
 # Function to check if already connected
-def is_already_connected(driver):
+def is_already_connected(driver, name):
     try:
-        driver.find_element(By.XPATH, '//*[contains(@aria-label, "Invite")]')
+        driver.find_element(By.XPATH, f'//*[contains(@aria-label, "Invite {name} to connect")]')
         return False
     except:
         return True
 
+
 # Function to like a post
-def like_post(driver):
+def like_post(driver, name):
     try:
         like_button = driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Like')]")
         aria_pressed = like_button.get_attribute('aria-pressed')
         if aria_pressed != 'true':
             like_button.click()
+            print(f"{name}: Liked recent post")
             time.sleep(2)
     except:
         pass
@@ -73,9 +75,9 @@ def search_for(driver, title, page_start, page_end):
 
 
 # Function to send a connection request
-def send_connection_request(driver):
+def send_connection_request(driver, name):
     try:
-        connect_button = driver.find_element(By.XPATH, '//*[contains(@aria-label, "Invite")]')
+        connect_button = driver.find_element(By.XPATH, f'//*[contains(@aria-label, "Invite {name} to connect")]')
         # Filthy hack to press a hidden button
         driver.execute_script("arguments[0].click();", connect_button)
         time.sleep(2)
@@ -84,12 +86,12 @@ def send_connection_request(driver):
         send_button.click()
         time.sleep(2)
 
-        print(f"Connection request successful")
+        print(f"{name}: Connection request successful")
 
     except NoSuchElementException as e:
-        print(f"No connect button - already connected")
+        print(f"{name}: Lost connect button: {e}")
     except Exception as e:
-        print(f"Error sending connection request: {e}")
+        print(f"{name}: Error sending connection request: {e}")
 
 
 # Main script
@@ -102,22 +104,25 @@ for idx, profile_url in enumerate(prospect_profiles):
     print(f"{idx} - Requesting url: {profile_url}")
     driver.get(profile_url)
     time.sleep(5)
-    connected = is_already_connected(driver)
+    name = driver.find_element(By.XPATH, '//h1[contains(@class, "text-heading-xlarge")]').text
+    print(f"Grabbed name: {name}")
+    connected = is_already_connected(driver, name)
 
     # Visit recent activity
     driver.get(driver.current_url + "/recent-activity/all/")
     time.sleep(5)
     # Like first post
-    like_post(driver)
+    like_post(driver, name)
 
     if not connected:
+        print(f"{name}: Sending connection request")
         # Head back to profile
         driver.get(profile_url)
         time.sleep(5)
         # Send connection request
-        send_connection_request(driver)
+        send_connection_request(driver, name)
     else:
-        print(f"Already connected to {profile_url}")
+        print(f"{name}: Already connected")
 
     # Sleep a random time until the next one
     time.sleep(randint(10,100))
